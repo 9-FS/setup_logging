@@ -1,0 +1,9 @@
+blank_lines_upper_bound      = 2
+brace_style                  = "AlwaysNextLine"
+combine_control_expr         = false
+control_brace_style          = "AlwaysNextLine"
+enum_discrim_align_threshold = 50
+hex_literal_case             = "Upper"
+indent_style                 = "Block"
+max_width                    = 200
+struct_field_align_threshold = 50

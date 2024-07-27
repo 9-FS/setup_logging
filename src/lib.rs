@@ -1,0 +1,206 @@
+// Copyright (c) 2024 구FS, all rights reserved. Subject to the MIT licence in `licence.md`.
+use unicode_segmentation::UnicodeSegmentation;
+
+
+/// # Summary
+/// Sets up the fern logging framework.
+/// # Arguments
+/// - `logging_level`: minimum logging level to log, discards all logs below this level
+/// - `filepath_format`: format of the filepath to write to, formatted with chrono::Utc::now()
+pub fn setup_logging(logging_level: log::Level, filepath_format: &'static str) -> ()
+{
+    let console_dispatch: fern::Dispatch;
+    let console_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(Output::Console));
+    let file_dispatch: fern::Dispatch;
+    let file_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(Output::File));
+
+
+    console_dispatch = fern::Dispatch::new()
+        .format(move |out: fern::FormatCallback, message: &std::fmt::Arguments, record: &log::Record| console_formatter.lock().unwrap().format(out, message, record)) // set formatter
+        .level(logging_level.to_level_filter()) // set minimum logging level
+        .chain(fern::Output::stderr("\n")); // log to console
+
+    file_dispatch = fern::Dispatch::new()
+        .format(move |out: fern::FormatCallback, message: &std::fmt::Arguments, record: &log::Record| file_formatter.lock().unwrap().format(out, message, record)) // set formatter
+        .level(logging_level.to_level_filter()) // set minimum logging level
+        .chain(fern::Output::call(move |record: &log::Record| {
+            write_record_to_file(record, filepath_format).unwrap_or_else(|e: std::io::Error| {
+                eprintln!(
+                    "{} ERROR Writing previous logging message to log file failed with \"{e}\". Unlogged message:\n\"\"\"\n{}\n\"\"\"",
+                    chrono::Utc::now().format("[%Y-%m-%dT%H:%M:%S]").to_string(),
+                    record.args(),
+                );
+            });
+        })); // log to file
+
+
+    fern::Dispatch::new()
+        .chain(console_dispatch) // log to stdout
+        .chain(file_dispatch) // log to file
+        .apply() // apply configuration
+        .unwrap();
+
+    return;
+}
+
+
+struct Formatter
+{
+    line_previous_len:       usize,  // line previous' length
+    line_previous_timestamp: String, // line previous' timestamp
+    timestamp_previous:      String, // timestamp previously used
+    output:                  Output, // where to log to
+}
+
+impl Formatter
+{
+    /// # Summary
+    /// Creates a new `Formatter` instance.
+    /// # Arguments
+    /// - `output`: where to log to
+    fn new(output: Output) -> Self
+    {
+        return Formatter {
+            line_previous_len:       0,
+            line_previous_timestamp: String::new(),
+            timestamp_previous:      String::new(),
+            output:                  output,
+        };
+    }
+
+    /// # Summary
+    /// Formats log messages to my personal preferences.
+    /// - Messages with linebreaks are properly indented.
+    /// - Timestamps are only printed if they changed from timestamp of previous line.
+    /// Console only:
+    /// - "\r" at the beginning of a message overwrites previous line.
+    /// - Logging levels are colour-coded.
+    fn format(&mut self, out: fern::FormatCallback, message_content: &std::fmt::Arguments, record: &log::Record) -> ()
+    {
+        const DEBUG_COLOUR: fern::colors::Color = fern::colors::Color::White;
+        const ERROR_COLOUR: fern::colors::Color = fern::colors::Color::BrightRed;
+        const INFO_COLOUR: fern::colors::Color = fern::colors::Color::Green;
+        const NEWLINE_INDENT_SPACES: usize = 28; // after linebreaks indent number of spaces
+        const WARN_COLOUR: fern::colors::Color = fern::colors::Color::BrightYellow;
+        let logging_level_colours: fern::colors::ColoredLevelConfig;
+        let mut message_content: String = message_content.to_string(); // &std::fmt::Arguments -> String#
+        let overwrite_line_current: bool; // whether to overwrite previous line
+        let timestamp: String; // timestamp to use, can be timestamp_current or spaces
+        let timestamp_current: String = chrono::Utc::now().format("[%Y-%m-%dT%H:%M:%S]").to_string(); // now
+
+
+        message_content = message_content.replace("\n", format!("\n{}", " ".repeat(NEWLINE_INDENT_SPACES)).as_str()); // after linebreaks indent content
+
+
+        if message_content.graphemes(true).collect::<Vec<&str>>()[0] == "\r"
+        // if message starts with "\r"
+        {
+            message_content = message_content.graphemes(true).collect::<Vec<&str>>()[1..].concat(); // remove carriage return
+
+            match self.output
+            {
+                Output::Console =>
+                // if console
+                {
+                    overwrite_line_current = true; //overwrite line previous
+                    eprint!("\x1B[A{}\r", " ".repeat(self.line_previous_len).as_str());
+                    // move cursor up 1 line, overwrite line previous, move cursor to line beginning
+                }
+                Output::File =>
+                {
+                    overwrite_line_current = false; // do not overwrite line previous
+                }
+            }
+        }
+        else
+        // if message does not start with "\r"
+        {
+            overwrite_line_current = false; // do not overwrite line previous
+        }
+
+        if overwrite_line_current == false
+        // if writing in line new:
+        {
+            self.line_previous_timestamp = self.timestamp_previous.clone(); // line previous' timestamp is timestamp previously used
+        }
+        if self.line_previous_timestamp == timestamp_current
+        // if line previous' timestamp same as timestamp current
+        {
+            timestamp = format!("{}", " ".repeat(self.line_previous_timestamp.len()).as_str());
+            // do not print timestamp, overwrite with spaces
+        }
+        else
+        //usually just timestamp current
+        {
+            timestamp = timestamp_current.clone();
+        }
+
+
+        match self.output
+        {
+            Output::Console =>
+            {
+                logging_level_colours = fern::colors::ColoredLevelConfig::new() // set colours for different logging levels
+                    .error(ERROR_COLOUR)
+                    .warn(WARN_COLOUR)
+                    .info(INFO_COLOUR)
+                    .debug(DEBUG_COLOUR)
+                    .trace(DEBUG_COLOUR);
+
+                out.finish(format_args!(
+                    "{} {:5} {}",                                // format
+                    timestamp,                                   // timestamp
+                    logging_level_colours.color(record.level()), // logging level, in console coloured
+                    message_content,                             // log message content
+                ));
+            }
+            Output::File =>
+            {
+                out.finish(format_args!(
+                    "{} {:5} {}",    // format
+                    timestamp,       // timestamp
+                    record.level(),  // logging level
+                    message_content, // log message content
+                ));
+            }
+        }
+
+        self.line_previous_len = NEWLINE_INDENT_SPACES + message_content.len(); // line previous' length = everything before message content + message content
+        self.timestamp_previous = timestamp_current; // timestamp previously used = timestamp current, not timestamp so proper comparison disregards use of spaces
+    }
+}
+
+
+/// # Summary
+/// logging outputs
+enum Output
+{
+    Console,
+    File,
+}
+
+
+/// # Summary
+/// Appends a log record to a file at filepath_format. The file is created if it does not exist.
+/// # Arguments
+/// - `record`: log record to write
+/// - `filepath_format`: format of the filepath to write to, formatted with chrono::Utc::now()
+/// # Returns
+/// - `Result<(), std::io::Error>`: whether the operation was successful
+/// # Errors
+/// - `std::io::Error`: if the file could not be opened or written to
+fn write_record_to_file(record: &log::Record, filepath_format: &str) -> Result<(), std::io::Error>
+{
+    let mut file: std::fs::File;
+    let filepath: String;
+
+
+    filepath = chrono::Utc::now().format(filepath_format).to_string(); // convert filepath_format to string with current datetime
+
+
+    std::fs::create_dir_all(std::path::Path::new(&filepath).parent().unwrap_or(std::path::Path::new("")))?; // create necessary parent directories if they do not exist yet, if no parent directory determination possible give "" to not create any directoy
+    file = std::fs::OpenOptions::new().create(true).append(true).open(filepath)?; // open file
+    std::io::Write::write_all(&mut file, format!("{}\n", record.args()).as_bytes())?; // write log record to file
+
+    return Ok(());
+}

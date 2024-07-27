@@ -1,0 +1,14 @@
+[package]
+description = "a clean logging setup for the `log` crate using `fern`"
+edition     = "2021"
+license     = "MIT"
+name        = "setup_logging"
+readme      = ""
+repository  = "https://github.com/9-FS/setup_logging"
+version     = "1.0.0"
+
+[dependencies]
+chrono               = "^0.4.20"
+fern                 = { features = ["colored"], version = "^0.6.0" }
+log                  = "^0.4.0"
+unicode-segmentation = "^1.11.0"
