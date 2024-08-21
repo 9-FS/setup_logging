@@ -4,6 +4,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 /// # Summary
 /// Sets up the fern logging framework.
+///
 /// # Arguments
 /// - `logging_level`: minimum logging level to log, discards all logs below this level
 /// - `filepath_format`: format of the filepath to write to, formatted with chrono::Utc::now()
@@ -56,6 +57,7 @@ impl Formatter
 {
     /// # Summary
     /// Creates a new `Formatter` instance.
+    ///
     /// # Arguments
     /// - `output`: where to log to
     fn new(output: Output) -> Self
@@ -182,13 +184,13 @@ enum Output
 
 /// # Summary
 /// Appends a log record to a file at filepath_format. The file is created if it does not exist.
+///
 /// # Arguments
 /// - `record`: log record to write
 /// - `filepath_format`: format of the filepath to write to, formatted with chrono::Utc::now()
+///
 /// # Returns
-/// - `Result<(), std::io::Error>`: whether the operation was successful
-/// # Errors
-/// - `std::io::Error`: if the file could not be opened or written to
+/// nothing or `std::io::Error` if the file could not be opened or written to
 fn write_record_to_file(record: &log::Record, filepath_format: &str) -> Result<(), std::io::Error>
 {
     let mut file: std::fs::File;
