@@ -33,19 +33,30 @@ Console only:
 #pagebreak(weak: true)
 
 = Installation
+== Bash
 
 + `cargo add setup_logging --git https://github.com/9-FS/setup_logging`
-+ In your `Cargo.toml` entry, replace "version" with "tag" to select the version you want to use.
++ In the created `Cargo.toml` entry, replace "version" with "tag" and overwrite the field with the desired version number.
 
-#info()[Cargo does not support automatic versioning for GitHub dependencies. Manual updates are required in the `Cargo.toml` file using "tag".]
+== Manual
+
++ Paste the following example `Cargo.toml` entry into your `Cargo.toml` beneath `[dependencies]`:
+
+    ```TOML
+    setup_logging = { git = "https://github.com/9-FS/setup_logging", tag = "1.0.0" }
+    ```
++ Overwrite the desired version number into the `tag` field. This example entry version will not be updated.
+
+#info()[Cargo does not support automatic versioning for GitHub dependencies. Manual updates are required in the `Cargo.toml` file using `tag`.]
 
 = Usage
 
-Call `setup_logging` with the desired minimum log level and log filepath format according to the `chrono` crate. After that, `log` can be used as usual.
++ Execute `setup_logging` with the desired minimum log level and log filepath format according to the `chrono` crate.
++ `log` can now be used as usual with the provided macros.
 
 == Example
 
-```rust
+```Rust
 setup_logging::setup_logging(log::Level::Info, "./log/%Y-%m-%d.log");
 
 log::debug!("debug message"); // not printed
@@ -56,7 +67,7 @@ log::error!("error message"); // printed without timestamp
 
 == Example
 
-```rust
+```Rust
 setup_logging::setup_logging(log::Level::Debug, "./log/%Y-%m-%dT%H_%M.log");
 
 log::debug!("debug message"); // printed
