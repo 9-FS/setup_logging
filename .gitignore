@@ -9,3 +9,4 @@ target/
 
 .env
 docker-image.tar
+rustfmt.toml
