@@ -9,6 +9,7 @@ on:
             # -   "[0-9]+.[0-9]+.[0-9]+"
             -   "*" # execute every time tag is pushed
 
+
 jobs:
     datetime:
         name: "Get Current Datetime"
