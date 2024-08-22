@@ -1,6 +1,10 @@
 [package]
+authors     = ["9-FS <pray4spam@googlemail.com>"]
+categories  = []
 description = "a clean logging setup for the `log` crate using `fern`"
 edition     = "2021"
+exclude     = [".github/", "readme.pdf"]                               # additional to .gitignore
+keywords    = []
 license     = "MIT"
 name        = "setup_logging"
 readme      = "readme.typ"
