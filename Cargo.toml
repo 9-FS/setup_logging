@@ -3,7 +3,7 @@ description = "a clean logging setup for the `log` crate using `fern`"
 edition     = "2021"
 license     = "MIT"
 name        = "setup_logging"
-readme      = "readme.pdf"
+readme      = "readme.typ"
 repository  = "https://github.com/9-FS/setup_logging"
 version     = "1.0.0"
 
