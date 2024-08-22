@@ -1,7 +1,7 @@
-name: "On Tag Release on Github"
+name: "On Tag Release on GitHub"
 env:
     REPO_NAME: "setup_logging"
-    RUN_TESTS: false
+    RUN_TESTS: true
     RUST_VERSION: "1.80"
 on:
     push:
@@ -57,7 +57,7 @@ jobs:
 
             -   name: "Run Tests"
                 if: ${{env.RUN_TESTS == 'true'}}
-                run: cargo test
+                run: "cargo test"
 
 
     create_release:
