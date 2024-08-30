@@ -12,9 +12,9 @@ use unicode_segmentation::UnicodeSegmentation;
 pub fn setup_logging(logging_level: log::Level, crate_logging_level: Option<std::collections::HashMap<String, log::Level>>, filepath_format: &'static str) -> ()
 {
     let mut console_dispatch: fern::Dispatch;
-    let console_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(Output::Console));
+    let console_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(logging_level, Output::Console));
     let mut file_dispatch: fern::Dispatch;
-    let file_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(Output::File));
+    let file_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(logging_level, Output::File));
 
 
     console_dispatch = fern::Dispatch::new()
@@ -55,10 +55,11 @@ pub fn setup_logging(logging_level: log::Level, crate_logging_level: Option<std:
 
 struct Formatter
 {
-    line_previous_len:       usize,  // line previous' length
-    line_previous_timestamp: String, // line previous' timestamp
-    timestamp_previous:      String, // timestamp previously used
-    output:                  Output, // where to log to
+    line_previous_len:       usize,      // line previous' length
+    line_previous_timestamp: String,     // line previous' timestamp
+    logging_level:           log::Level, // minimum logging level to log
+    timestamp_previous:      String,     // timestamp previously used
+    output:                  Output,     // where to log to
 }
 
 impl Formatter
@@ -67,12 +68,14 @@ impl Formatter
     /// Creates a new `Formatter` instance.
     ///
     /// # Arguments
+    /// - `logging_level`: minimum logging level to log, discards all logs below this level
     /// - `output`: where to log to
-    fn new(output: Output) -> Self
+    fn new(logging_level: log::Level, output: Output) -> Self
     {
         return Formatter {
             line_previous_len:       0,
             line_previous_timestamp: String::new(),
+            logging_level:           logging_level,
             timestamp_previous:      String::new(),
             output:                  output,
         };
@@ -90,16 +93,13 @@ impl Formatter
         const DEBUG_COLOUR: fern::colors::Color = fern::colors::Color::White;
         const ERROR_COLOUR: fern::colors::Color = fern::colors::Color::BrightRed;
         const INFO_COLOUR: fern::colors::Color = fern::colors::Color::Green;
-        const NEWLINE_INDENT_SPACES: usize = 28; // after linebreaks indent number of spaces
         const WARN_COLOUR: fern::colors::Color = fern::colors::Color::BrightYellow;
         let logging_level_colours: fern::colors::ColoredLevelConfig;
-        let mut message_content: String = message_content.to_string(); // &std::fmt::Arguments -> String#
+        let mut message = String::new(); // message to log with all formatting like timestamps or space, logging level, message content
+        let mut message_content: String = message_content.to_string(); // message content to log, &std::fmt::Arguments -> String
         let overwrite_line_current: bool; // whether to overwrite previous line
         let timestamp: String; // timestamp to use, can be timestamp_current or spaces
         let timestamp_current: String = chrono::Utc::now().format("[%Y-%m-%dT%H:%M:%S]").to_string(); // now
-
-
-        message_content = message_content.replace("\n", format!("\n{}", " ".repeat(NEWLINE_INDENT_SPACES)).as_str()); // after linebreaks indent content
 
 
         if message_content.graphemes(true).collect::<Vec<&str>>()[0] == "\r"
@@ -146,6 +146,15 @@ impl Formatter
         }
 
 
+        message += timestamp.as_str();
+        if log::Level::Debug <= self.logging_level
+        // if logging level is debug or lower
+        {
+            message += &format!(" [{}]", record.target()).as_str(); // apprend crate name
+        }
+
+        message_content = message_content.replace("\n", format!("\n{}", " ".repeat(message.len() + 7)).as_str()); // after linebreaks indent content, here because timestamp and crate name already accounted for and logging level always same length
+
         match self.output
         {
             Output::Console =>
@@ -157,25 +166,18 @@ impl Formatter
                     .debug(DEBUG_COLOUR)
                     .trace(DEBUG_COLOUR);
 
-                out.finish(format_args!(
-                    "{} {:5} {}",                                // format
-                    timestamp,                                   // timestamp
-                    logging_level_colours.color(record.level()), // logging level, in console coloured
-                    message_content,                             // log message content
-                ));
+                message += &format!(" {:5}", logging_level_colours.color(record.level())).as_str();
+                // append coloured logging level
             }
             Output::File =>
             {
-                out.finish(format_args!(
-                    "{} {:5} {}",    // format
-                    timestamp,       // timestamp
-                    record.level(),  // logging level
-                    message_content, // log message content
-                ));
+                message += &format!(" {:5}", record.level()).as_str(); // append logging level
             }
         }
+        message += &format!(" {}", message_content).as_str(); // append message content
+        out.finish(format_args!("{}", message)); // finish message
 
-        self.line_previous_len = NEWLINE_INDENT_SPACES + message_content.len(); // line previous' length = everything before message content + message content
+        self.line_previous_len = message.len(); // line previous' length
         self.timestamp_previous = timestamp_current; // timestamp previously used = timestamp current, not timestamp so proper comparison disregards use of spaces
     }
 }
