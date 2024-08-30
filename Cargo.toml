@@ -15,4 +15,4 @@ version     = "1.0.0"
 chrono               = "^0.4.20"
 fern                 = { features = ["colored"], version = "^0.6.0" }
 log                  = "^0.4.0"
-unicode-segmentation = "^1.11.0"
+unicode-segmentation = "^1.0.0"
