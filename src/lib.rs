@@ -7,12 +7,13 @@ use unicode_segmentation::UnicodeSegmentation;
 ///
 /// # Arguments
 /// - `logging_level`: minimum logging level to log, discards all logs below this level
+/// - `crate_logging_level`: minimum logging level to log for specific crates, discards all logs below this level
 /// - `filepath_format`: format of the filepath to write to, formatted with chrono::Utc::now()
-pub fn setup_logging(logging_level: log::Level, filepath_format: &'static str) -> ()
+pub fn setup_logging(logging_level: log::Level, crate_logging_level: Option<std::collections::HashMap<String, log::Level>>, filepath_format: &'static str) -> ()
 {
-    let console_dispatch: fern::Dispatch;
+    let mut console_dispatch: fern::Dispatch;
     let console_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(Output::Console));
-    let file_dispatch: fern::Dispatch;
+    let mut file_dispatch: fern::Dispatch;
     let file_formatter: std::sync::Mutex<Formatter> = std::sync::Mutex::new(Formatter::new(Output::File));
 
 
@@ -33,6 +34,13 @@ pub fn setup_logging(logging_level: log::Level, filepath_format: &'static str) -
                 );
             });
         })); // log to file
+
+    for (crate_name, crate_logging_level) in crate_logging_level.unwrap_or(std::collections::HashMap::new())
+    // set minimum logging level for specific crates
+    {
+        console_dispatch = console_dispatch.level_for(crate_name.clone(), crate_logging_level.to_level_filter());
+        file_dispatch = file_dispatch.level_for(crate_name, crate_logging_level.to_level_filter());
+    }
 
 
     fern::Dispatch::new()
