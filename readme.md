@@ -10,21 +10,13 @@ Console only:
 - Logging levels are colour-coded.
 
 ## Installation
-### Bash
-
-1. `cargo add setup_logging --git https://github.com/9-FS/setup_logging`
-1. In the created `Cargo.toml` entry, replace "version" with "tag" and overwrite the field with the desired version number.
-
-### Manual
-
-1. Paste the following example `Cargo.toml` entry into your `Cargo.toml` beneath `[dependencies]`:
+1. Paste the following `Cargo.toml` entry into your `Cargo.toml` beneath `[dependencies]`:
     ```TOML
-    setup_logging = { git = "https://github.com/9-FS/setup_logging", tag = "1.0.0" }
+    setup_logging = { git = "https://github.com/9-FS/setup_logging", tag = "" }
     ```
-1. Overwrite the desired version number into the `tag` field. This example entry version will not be updated.
-
-> [!NOTE]
-> Cargo does not support automatic versioning for GitHub dependencies. Manual updates are required in the `Cargo.toml` file using `tag`.
+1. Write the desired version number into the `tag` field.
+    > [!NOTE]
+    > Cargo does not support automatic versioning for GitHub dependencies. Manual updates are required in the `Cargo.toml` file using `tag`.
 
 ## Usage
 
