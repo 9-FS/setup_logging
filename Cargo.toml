@@ -9,7 +9,7 @@ license     = "MIT"
 name        = "setup_logging"
 readme      = "readme.typ"
 repository  = "https://github.com/9-FS/setup_logging"
-version     = "2.1.0"
+version     = "2.1.1"
 
 [dependencies]
 chrono               = "^0.4.20"
